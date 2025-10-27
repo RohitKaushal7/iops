@@ -22,8 +22,19 @@
       "!**/.source"
     ]
   },
-  "extends": [
-    "ultracite/core",
-    "ultracite/react"
-  ]
+  "extends": ["ultracite/core", "ultracite/react"],
+  "linter": {
+    "rules": {
+      "style": {
+        "noMagicNumbers": "off",
+        "useBlockStatements": "off"
+      },
+      "correctness": {
+        "useImageSize": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off"
+      }
+    }
+  }
 }

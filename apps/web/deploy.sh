@@ -1,0 +1,1 @@
+rsync -avz ./dist/ cbs:/root/pages/iops/

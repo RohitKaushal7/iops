@@ -1,6 +1,6 @@
 # iops
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, and more.
+A UI wrapper to talk to [h2non/imaginary](https://github.com/h2non/imaginary)
 
 ## Features
 
@@ -17,6 +17,12 @@ First, install the dependencies:
 bun install
 ```
 
+Setup .env
+
+```env
+VITE_SERVER_URL=http://localhost:3000
+VITE_API_BASE_URL=http://your_imaginary_url
+```
 
 Then, run the development server:
 
@@ -25,12 +31,6 @@ bun dev
 ```
 
 Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-
-
-
-
-
-
 
 ## Project Structure
 
