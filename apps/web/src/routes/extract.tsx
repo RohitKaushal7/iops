@@ -1,6 +1,8 @@
 import { Selection } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import ReactCrop, { type Crop, convertToPixelCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 import {
   AreaHeightParam,
   AreaWidthParam,
@@ -50,6 +52,19 @@ function ExtractComponent() {
   const [selectedImage, setSelectedImage] = useState<File | string | null>(
     null
   );
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [crop, setCrop] = useState<Crop>({
+    unit: "%",
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 100,
+  });
+  const [actualImageDimensions, setActualImageDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   // Extract params
   const [top, setTop] = useState(0);
@@ -91,6 +106,17 @@ function ExtractComponent() {
 
   const handleImageSelect = (file: File | string | null) => {
     setSelectedImage(file);
+    if (file instanceof File) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else if (typeof file === "string") {
+      setImagePreview(file);
+    } else {
+      setImagePreview(null);
+    }
   };
 
   const handleProcess = async () => {
@@ -137,6 +163,55 @@ function ExtractComponent() {
     });
   };
 
+  const applyCropDimensions = () => {
+    if (crop && actualImageDimensions) {
+      // Convert crop to pixel values based on actual image dimensions
+      const pixelCrop = convertToPixelCrop(
+        crop,
+        actualImageDimensions.width,
+        actualImageDimensions.height
+      );
+
+      // Ensure values don't exceed image dimensions
+      setLeft(Math.min(Math.round(pixelCrop.x), actualImageDimensions.width));
+      setTop(Math.min(Math.round(pixelCrop.y), actualImageDimensions.height));
+      setAreawidth(
+        Math.min(
+          Math.round(pixelCrop.width),
+          actualImageDimensions.width - Math.round(pixelCrop.x)
+        )
+      );
+      setAreaheight(
+        Math.min(
+          Math.round(pixelCrop.height),
+          actualImageDimensions.height - Math.round(pixelCrop.y)
+        )
+      );
+    }
+  };
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img) return;
+    if (!imagePreview) return;
+
+    const updateDimensions = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setActualImageDimensions({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+      }
+    };
+
+    if (img.complete) {
+      updateDimensions();
+    } else {
+      img.addEventListener("load", updateDimensions);
+      return () => img.removeEventListener("load", updateDimensions);
+    }
+  }, [imagePreview]);
+
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
       <div className="mb-8 flex items-center gap-3">
@@ -155,6 +230,51 @@ function ExtractComponent() {
             onImageSelect={handleImageSelect}
             selectedImage={selectedImage}
           />
+
+          {imagePreview && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Visual Crop (Optional)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ReactCrop crop={crop} onChange={(_, c) => setCrop(c)}>
+                  <img
+                    alt="Crop preview"
+                    className="max-w-full"
+                    ref={imgRef}
+                    src={imagePreview}
+                  />
+                </ReactCrop>
+                {actualImageDimensions && (
+                  <p className="mt-2 text-muted-foreground text-sm">
+                    Actual image size: {actualImageDimensions.width} x{" "}
+                    {actualImageDimensions.height}px
+                  </p>
+                )}
+                {crop &&
+                  actualImageDimensions &&
+                  (() => {
+                    const pixelCrop = convertToPixelCrop(
+                      crop,
+                      actualImageDimensions.width,
+                      actualImageDimensions.height
+                    );
+                    return (
+                      <Button
+                        className="mt-4"
+                        onClick={applyCropDimensions}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Apply Crop ({Math.round(pixelCrop.x)},{" "}
+                        {Math.round(pixelCrop.y)}, {Math.round(pixelCrop.width)}{" "}
+                        x {Math.round(pixelCrop.height)}px)
+                      </Button>
+                    );
+                  })()}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

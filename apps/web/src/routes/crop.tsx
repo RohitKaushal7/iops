@@ -1,8 +1,7 @@
 import { Crop as CropIcon } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
-import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
-import "react-image-crop/dist/ReactCrop.css";
+import { useEffect, useState } from "react";
+
 import {
   AspectRatioParam,
   BackgroundParam,
@@ -38,20 +37,37 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useImageProcessor } from "@/lib/use-image-processor";
 
 export const Route = createFileRoute("/crop")({
   component: CropComponent,
 });
 
+const ASPECT_RATIOS = [
+  { label: "Free", value: "free", ratio: null },
+  { label: "1:1", value: "1:1", ratio: 1 / 1 },
+  { label: "16:9", value: "16:9", ratio: 16 / 9 },
+  { label: "9:16", value: "9:16", ratio: 9 / 16 },
+  { label: "3:4", value: "3:4", ratio: 3 / 4 },
+  { label: "4:3", value: "4:3", ratio: 4 / 3 },
+  { label: "2:3", value: "2:3", ratio: 2 / 3 },
+  { label: "3:2", value: "3:2", ratio: 3 / 2 },
+  { label: "1:2", value: "1:2", ratio: 1 / 2 },
+  { label: "2:1", value: "2:1", ratio: 2 / 1 },
+  { label: "21:9", value: "21:9", ratio: 21 / 9 },
+];
+
 function CropComponent() {
   const [selectedImage, setSelectedImage] = useState<File | string | null>(
     null
   );
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
-  const imgRef = useRef<HTMLImageElement>(null);
+  const [actualImageDimensions, setActualImageDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState("free");
 
   // Basic params
   const [width, setWidth] = useState(500);
@@ -100,6 +116,38 @@ function CropComponent() {
     }
   };
 
+  const getAspectRatio = () => {
+    const selected = ASPECT_RATIOS.find(
+      (ar) => ar.value === selectedAspectRatio
+    );
+    return selected?.ratio ?? null;
+  };
+
+  const handleWidthChange = (newWidth: number) => {
+    setWidth(newWidth);
+    const ratio = getAspectRatio();
+    if (ratio !== null && newWidth > 0) {
+      setHeight(Math.round(newWidth / ratio));
+    }
+  };
+
+  const handleHeightChange = (newHeight: number) => {
+    setHeight(newHeight);
+    const ratio = getAspectRatio();
+    if (ratio !== null && newHeight > 0) {
+      setWidth(Math.round(newHeight * ratio));
+    }
+  };
+
+  const handleAspectRatioChange = (value: string) => {
+    setSelectedAspectRatio(value);
+    // Apply aspect ratio to current dimensions
+    const selected = ASPECT_RATIOS.find((ar) => ar.value === value);
+    if (selected?.ratio !== null && selected?.ratio && width > 0) {
+      setHeight(Math.round(width / selected.ratio));
+    }
+  };
+
   const handleProcess = async () => {
     if (!selectedImage) {
       return;
@@ -140,12 +188,18 @@ function CropComponent() {
     });
   };
 
-  const applyCropDimensions = () => {
-    if (completedCrop) {
-      setWidth(Math.round(completedCrop.width));
-      setHeight(Math.round(completedCrop.height));
-    }
-  };
+  useEffect(() => {
+    if (!imagePreview) return;
+
+    const img = new Image();
+    img.onload = () => {
+      setActualImageDimensions({
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+      });
+    };
+    img.src = imagePreview;
+  }, [imagePreview]);
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
@@ -166,35 +220,13 @@ function CropComponent() {
             selectedImage={selectedImage}
           />
 
-          {imagePreview && (
+          {actualImageDimensions && (
             <Card>
-              <CardHeader>
-                <CardTitle>Visual Crop (Optional)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ReactCrop
-                  crop={crop}
-                  onChange={(c) => setCrop(c)}
-                  onComplete={(c) => setCompletedCrop(c)}
-                >
-                  <img
-                    alt="Crop preview"
-                    className="max-w-full"
-                    ref={imgRef}
-                    src={imagePreview}
-                  />
-                </ReactCrop>
-                {completedCrop && (
-                  <Button
-                    className="mt-4"
-                    onClick={applyCropDimensions}
-                    size="sm"
-                    variant="outline"
-                  >
-                    Apply Crop Dimensions ({Math.round(completedCrop.width)} x{" "}
-                    {Math.round(completedCrop.height)})
-                  </Button>
-                )}
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-sm">
+                  Actual image size: {actualImageDimensions.width} x{" "}
+                  {actualImageDimensions.height}px
+                </p>
               </CardContent>
             </Card>
           )}
@@ -215,9 +247,32 @@ function CropComponent() {
                 </TabsList>
 
                 <TabsContent className="space-y-4" value="basic">
+                  <div className="space-y-2">
+                    <p className="font-medium text-sm">Aspect Ratio</p>
+                    <ToggleGroup
+                      onValueChange={handleAspectRatioChange}
+                      type="single"
+                      value={selectedAspectRatio}
+                    >
+                      {ASPECT_RATIOS.map((ar) => (
+                        <ToggleGroupItem key={ar.value} value={ar.value}>
+                          {ar.label}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                    {selectedAspectRatio !== "free" && (
+                      <p className="text-muted-foreground text-xs">
+                        Aspect ratio locked. Changing one dimension will
+                        automatically adjust the other.
+                      </p>
+                    )}
+                  </div>
+
+                  <Separator />
+
                   <div className="grid grid-cols-2 gap-4">
-                    <WidthParam onChange={setWidth} value={width} />
-                    <HeightParam onChange={setHeight} value={height} />
+                    <WidthParam onChange={handleWidthChange} value={width} />
+                    <HeightParam onChange={handleHeightChange} value={height} />
                   </div>
 
                   <GravityParam onChange={setGravity} value={gravity} />
