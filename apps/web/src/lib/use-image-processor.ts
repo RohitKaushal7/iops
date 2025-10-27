@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { API_BASE_URL } from "./constants";
+import { useAppStore } from "./app.store";
 
 type ProcessImageOptions = {
   endpoint: string;
@@ -8,6 +8,7 @@ type ProcessImageOptions = {
 };
 
 export function useImageProcessor() {
+  const apiBaseUrl = useAppStore((state) => state.apiBaseUrl);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export function useImageProcessor() {
     setProcessedImage(null);
 
     try {
-      let url = `${API_BASE_URL}${endpoint}`;
+      let url = `${apiBaseUrl}${endpoint}`;
 
       // If image is a URL string
       if (typeof image === "string") {

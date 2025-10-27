@@ -5,7 +5,7 @@ import { ImageUploader } from "@/components/image-uploader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { API_BASE_URL } from "@/lib/constants";
+import { useAppStore } from "@/lib/app.store";
 
 export const Route = createFileRoute("/info")({
   component: InfoComponent,
@@ -23,6 +23,7 @@ type ImageInfo = {
 };
 
 function InfoComponent() {
+  const apiBaseUrl = useAppStore((state) => state.apiBaseUrl);
   const [selectedImage, setSelectedImage] = useState<File | string | null>(
     null
   );
@@ -46,7 +47,7 @@ function InfoComponent() {
     setImageInfo(null);
 
     try {
-      let url = `${API_BASE_URL}/info`;
+      let url = `${apiBaseUrl}/info`;
 
       if (typeof selectedImage === "string") {
         const queryParams = new URLSearchParams({ url: selectedImage });

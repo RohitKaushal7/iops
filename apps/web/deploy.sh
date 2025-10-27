@@ -1,1 +1,1 @@
-rsync -avz ./dist/ cbs:/root/pages/iops/
+bun run build && rsync -avz ./dist/ cbs:/root/pages/iops/

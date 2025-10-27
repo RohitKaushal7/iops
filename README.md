@@ -17,13 +17,6 @@ First, install the dependencies:
 bun install
 ```
 
-Setup .env
-
-```env
-VITE_SERVER_URL=http://localhost:3000
-VITE_API_BASE_URL=http://your_imaginary_url
-```
-
 Then, run the development server:
 
 ```bash
